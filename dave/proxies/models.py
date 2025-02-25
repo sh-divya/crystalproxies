@@ -232,6 +232,7 @@ class ProxyEmbeddingModel(nn.Module):
                 **sg_encoder_config, sg_to_ps_dict=pointsymms, sg_to_cls_dict=cryslatsys
             )
             sg_emb_size = self.sg_emb.output_size
+            # print("SUM of SG embeddings", sg_emb_size)
         else:
             # basic space groups embedding
             self.sg_emb = nn.Embedding(231, sg_emb_size)
@@ -240,7 +241,6 @@ class ProxyEmbeddingModel(nn.Module):
             self.use_wyck_embeds = wyckoff_config["use"]
         else:
             self.use_wyck_embeds = False
-            wyck_emb_size = 0
 
         if self.use_wyck_embeds:
             wyck_emb_size = wyckoff_config["wyck_embed_size"]
@@ -251,6 +251,8 @@ class ProxyEmbeddingModel(nn.Module):
             else:
                 wyck_dix = {}
             self.wyck_emb = WyckoffEncoder(wyck_emb_size, wyck_dix)
+        else:
+            wyck_emb_size = 0
 
         # lattice parameters MLP
         self.lat_emb_mlp = mlp_from_layers(
@@ -261,6 +263,7 @@ class ProxyEmbeddingModel(nn.Module):
         self.pred_inp_size = (
             comp_hidden_channels + wyck_emb_size + sg_emb_size + lat_hidden_channels
         )
+        # print("SUM of all other embs", self.pred_inp_size)
 
         # output MLP
         self.prediction_head = ProxyMLP(
@@ -281,6 +284,7 @@ class ProxyEmbeddingModel(nn.Module):
         # lat_x -> batch_size x 6
 
         # Process the composition
+        num_x = torch.sum(comp_x, dim=-1)
         if self.use_comp_phys_embeds:
             idx = torch.nonzero(comp_x)
             z = torch.repeat_interleave(
@@ -299,6 +303,7 @@ class ProxyEmbeddingModel(nn.Module):
             comp_h = self.comp_emb_mlp(comp_x)
 
         if self.use_wyck_embeds:
+            # print("It should not be going here")
             wy_h = self.wyck_emb(wy_x)
             comp_h = torch.cat((comp_h, wy_h), dim=-1)
 
@@ -311,7 +316,12 @@ class ProxyEmbeddingModel(nn.Module):
         # TODO: add a counter for the number of atoms in the unit cell
 
         # Concatenate and predict
+        # print("Actual sizes")
+        # print(comp_h.shape)
+        # print(sg_h.shape)
+        # print(lat_h.shape)
         h = torch.cat((comp_h, sg_h, lat_h), dim=-1)
+        # raise Exception
         return self.prediction_head(h)
 
 
@@ -493,9 +503,7 @@ class SpaceGroupEncoder(nn.Module):
             else None
         )
         self.cl_system_encoder = (
-            nn.Embedding(8 + 1, point_symmetry_size)
-            if point_symmetry_size > 0
-            else None
+            nn.Embedding(8 + 1, cl_system_size) if point_symmetry_size > 0 else None
         )
 
         # Make tensor that maps space groups to point symmetries
@@ -627,7 +635,7 @@ class SpaceGroupEncoder(nn.Module):
                 encoder is not available.
         """
         if self.cl_system_encoder:
-            return self.cl_system_encoder(self.sg_to_ps[space_group])
+            return self.cl_system_encoder(self.sg_to_cls[space_group])
 
     def forward(self, space_group: int, as_dict=False):
         """
@@ -657,6 +665,9 @@ class SpaceGroupEncoder(nn.Module):
         }
         if as_dict:
             return embeddings
+        # print("SG individual Embeddings")
+        # for k, v in embeddings.items():
+        #     print(k, v.shape)
         return torch.cat([h for h in embeddings.values() if h is not None], -1)
 
 
@@ -667,17 +678,36 @@ class WyckoffEncoder(nn.Module):
         wyckoff_dix: dict = {},
     ):
         super(WyckoffEncoder, self).__init__()
+        self.emb_size = emb_size
         if wyckoff_dix:
             pretrained = torch.zeros((64, 1))
             for keys, values in wyckoff_dix.items():
                 embed = torch.FloatTensor(values["mean"]).unsqueeze(-1)
                 pretrained = torch.cat((pretrained, embed), dim=-1)
             pretrained = pretrained.transpose(0, 1)
-            self.embedding_layer = nn.Embedding.from_pretrained(pretrained)
+            self.embedding_layer = nn.Embedding.from_pretrained(
+                pretrained
+            ).requires_grad_(False)
         else:
             self.embedding_layer = nn.Embedding(991, emb_size)
 
     def forward(self, wyck_x):
-        wyck_i = wyck_x[:, -1]
+        # sort wyckoff tuples according to 0 / Z
+        sort_idx = torch.argsort(wyck_x[:, :, 0], dim=1)
+        # reshape sorting indices into same shape of wyck_x
+        # also copying the indices to sort wyckoff index as well, according to Z
+        sort_idx = sort_idx.unsqueeze(-1).expand(-1, -1, wyck_x.shape[2])
+        # rearrange the tuples in each batch according to sort_idx
+        wyck_x = torch.gather(wyck_x, dim=1, index=sort_idx)
+        wyck_i = wyck_x[:, :, -1]
+        num_w = wyck_x.shape[1]
+        num_x = torch.sum(wyck_i > 0, dim=1)
+        batch = num_x.shape[0]
+        weights = torch.zeros([batch, num_w, self.emb_size], device=wyck_x.device)
+        for i, n in enumerate(num_x):
+            idx = [-(_ + 1) for _ in range(n)]
+            weights[i][idx] = 1
         wyck_h = self.embedding_layer(wyck_i)
+        # multiply embeddings of 0, with 0
+        wyck_h = wyck_h * weights
         return wyck_h.mean(dim=1)

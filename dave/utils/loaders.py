@@ -62,10 +62,10 @@ def make_loaders(config):
         name = "matbench_mp_e_gap"
     elif data == "ic":
         name = "nrcc_ionic_conductivity"
-
+    elif data == "sgfilter":
+        name = "mb_eform_sg_filter"
     else:
         raise ValueError(f"Unknown config: {config['config']}")
-
 
     load_class = DataLoader
     trainset = CrystalFeat(
@@ -74,6 +74,7 @@ def make_loaders(config):
         subset="train",
         scalex=config["scales"]["x"],
         scaley=config["scales"]["y"],
+        max_z=config["max_z"],
     )
 
     if config.get("crossval"):
@@ -119,6 +120,7 @@ def make_loaders(config):
             subset="val",
             scalex=config["scales"]["x"],
             scaley=config["scales"]["y"],
+            max_z=config["max_z"],
         )
 
         return {

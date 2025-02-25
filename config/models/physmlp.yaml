@@ -1,20 +1,21 @@
 model:
   num_layers: 5
-  hidden_channels: 384
+  hidden_channels: 576
   sg_emb_size: 128
-  lat_hidden_channels: 32
-  lat_num_layers: 3
+  lat_hidden_channels: 284
+  lat_num_layers: 1
   comp_num_layers: 2
   comp_hidden_channels: 128
   comp_phys_embeds:
     use: True
-    z_emb_size: 64
-    period_emb_size: 8
+    z_emb_size: 128
+    period_emb_size: 256
     group_emb_size: 16
-    properties_proj_size: 16
+    properties_proj_size: 64
     n_elements: 90
   sg_encoder:
     use: False # defaults to a simple Embedding(sg_emb_size) if this is False instead of SpaceGroupEncoder
+    sg_yaml: /network/scratch/d/divya.sharma/crystals/data/crystallograpy/yaml
     symmetries_hiddens: [128, 16] # hidden layers of the symmetry vectors encoder
     symmetries_aggregation: "mean" # aggregation method for the symmetry vectors ; see SpaceGroupEncoder.aggregate_symmetry_embeddings
     space_group_size: 16 # embedding size of the space group's free embedding
@@ -23,14 +24,14 @@ model:
   wyck_encoder:
     use: True
     wyck_embed_size: 64
-    # wyck_lm_yaml: path to dir that contains wyckoff LM embeddings
+    # wyck_lm_yaml: /network/scratch/d/divya.sharma/crystals/data # path to dir that contains wyckoff LM embeddings
 
 optim:
-  batch_size: 196
-  lr: 0.0014
+  batch_size: 448
+  lr: 0.0017
   epochs: 40
   es_patience: 7
   scheduler:
-    name: ""  # StepLR, ReduceLROnPlateau
+    name: "ReduceLROnPlateau"  # StepLR, ""
     step_size: 5000
     decay_factor: 0.5

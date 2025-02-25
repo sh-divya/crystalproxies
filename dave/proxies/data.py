@@ -13,6 +13,7 @@ def parse_sample(data, target):
     parsed_data = []
     elem_df = fetch_table("elements")
     all_elems = elem_df["symbol"]
+    data_elems = []
 
     # pat = re.compile("|".join(all_elems.tolist()))
 
@@ -41,11 +42,13 @@ def parse_sample(data, target):
         comp = Composition(comp).get_el_amt_dict()
         for k, v in comp.items():
             dix[k] = v
+            data_elems.append(k)
         parsed_data.append(dix)
-    return pd.DataFrame(parsed_data)
+    data_elems = set(data_elems)
+    return pd.DataFrame(parsed_data), list(data_elems)
 
 
-def composition_df_to_z_tensor(comp_df, max_z=-1):
+def composition_df_to_z_tensor(comp_df, max_z=-1, all_elems=None):
     """
     Transforms a dataframe with missing species to a complete tensor with composition
     for all elements up to max_z.
@@ -53,14 +56,25 @@ def composition_df_to_z_tensor(comp_df, max_z=-1):
     Args:
         comp_df (pd.DataFrame): The csv data as a DataFrame
         max_z (int, optional): Maximum atomic number in the data set. Defaults to -1.
+        all_elems (list[str], optional): list of elems
     """
     table = fetch_table("elements").loc[:, ["atomic_number", "symbol"]]
     table = table.set_index("symbol")
     if max_z == -1:
         max_z = table.loc[comp_df.columns[-1], "atomic_number"]
+    if all_elems != None:
+        max_z_data = table.loc[all_elems, "atomic_number"].max()
+    else:
+        max_z_data = -1
+    # print("Input Max Z", max_z)
+    # print("Max Z data", max_z_data)
     z = np.zeros((len(comp_df), max_z + 1))
     for col in comp_df.columns:
-        z[:, table.loc[col, "atomic_number"]] = comp_df[col].values
+        elem = table.loc[col, "atomic_number"]
+        # removing columns that have elements with atomic number
+        # more than max_z
+        if elem <= max_z:
+            z[:, table.loc[col, "atomic_number"]] = comp_df[col].values
     return torch.tensor(z, dtype=torch.int32)
 
 
@@ -77,7 +91,7 @@ def parse_wyckoff(wyckoff):
             w = int(item[1])
             new_wyck.append((z, w))
 
-        for _ in range(1278 - len(parse_row)):
+        for _ in range(228 - len(parse_row)):
             new_wyck.append((0, 0))
 
         all_wyck.append(np.array(new_wyck))
@@ -86,7 +100,14 @@ def parse_wyckoff(wyckoff):
 
 class CrystalFeat(Dataset):
     def __init__(
-        self, root, target, write=False, subset="train", scalex=False, scaley=False
+        self,
+        root,
+        target,
+        write=False,
+        subset="train",
+        scalex=False,
+        scaley=False,
+        max_z=94,
     ):
         csv_path = root
         self.subsets = {}
@@ -110,7 +131,7 @@ class CrystalFeat(Dataset):
         self.ytransform = scaley
         data_df = pd.read_csv(osp.join(csv_path, subset + "_data.csv"))
         self.y = torch.tensor(data_df[target].values, dtype=torch.float32)
-        data_df = parse_sample(data_df, target)
+        data_df, all_elems = parse_sample(data_df, target)
         sub_cols = [
             col for col in data_df.columns if col not in set(self.cols_of_interest)
         ]
@@ -127,7 +148,9 @@ class CrystalFeat(Dataset):
         except KeyError:
             self.wyckoff = None
         # N x (max_z + 1) -> H is index 1
-        self.composition = composition_df_to_z_tensor(data_df[sub_cols[H_index:]])
+        self.composition = composition_df_to_z_tensor(
+            data_df[sub_cols[H_index:]], max_z, all_elems
+        )
 
         # To directly handle missing atomic numbers
         # missing_atoms = torch.zeros(x.shape[0], 5)
