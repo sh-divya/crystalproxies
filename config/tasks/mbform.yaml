@@ -1,5 +1,5 @@
-root: /network/projects/crystalgfn/data/materials_dataset_v4/data/
-src: $root/matbench_mp_e_form
+root: /network/projects/crystalgfn/data/materials_dataset_v4/
+src: $root/data/matbench_mp_e_form
 target: Eform
 scales:
   x:
@@ -10,7 +10,7 @@ scales:
     load: torch
     mean: $src/y.mean
     std: $src/y.std
-comp_size: 84
+comp_size: 95
 lat_size: 6
 alphabet: [
   1,
