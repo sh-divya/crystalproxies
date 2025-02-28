@@ -10,21 +10,21 @@ from dave.utils.gnn import preprocess_data
 class ProxyModule(pl.LightningModule):
     def __init__(self, proxy, loss, config):
         super().__init__()
+        self.model_name = config["config"].split("-")[0]
+        if self.model_name in ["fae", "faecry", "sch", "pyxtal_faenet"]:
+            self.preproc_method = "graph"
         self.model = proxy
         self.criterion = loss
         self.lr = config["optim"]["lr"]
         self.loss = 0
-        self.config = config
+        self.config = {**config["model"], **config["optim"]}
         self.mae = MeanAbsoluteError()
         self.mse = MeanSquaredError()
         self.best_mae = 10e6
         self.best_mse = 10e6
-        self.save_hyperparameters(config)
+        self.save_hyperparameters(self.config)
         self.active_logger = config.get("debug") is None
         self.preproc_method = False
-        self.model_name = self.config["config"].split("-")[0]
-        if self.model_name in ["fae", "faecry", "sch", "pyxtal_faenet"]:
-            self.preproc_method = "graph"
 
     def training_step(self, batch, batch_idx):
         x, y = preprocess_data(batch, self.preproc_method)
@@ -97,18 +97,18 @@ class ProxyModule(pl.LightningModule):
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), self.lr)
-        if self.config["optim"]["scheduler"]["name"] == "ReduceLROnPlateau":
+        if self.config["scheduler"]["name"] == "ReduceLROnPlateau":
             scheduler = optim.lr_scheduler.ReduceLROnPlateau(
                 optimizer,
-                factor=self.config["optim"]["scheduler"]["decay_factor"],
-                patience=self.config["optim"]["scheduler"].get("patience")
-                or self.config["optim"]["es_patience"],
+                factor=self.config["scheduler"]["decay_factor"],
+                patience=self.config["scheduler"].get("patience")
+                or self.config["es_patience"],
             )
-        elif self.config["optim"]["scheduler"]["name"] == "StepLR":
+        elif self.config["scheduler"]["name"] == "StepLR":
             scheduler = optim.lr_scheduler.StepLR(
                 optimizer,
-                step_size=self.config["optim"]["scheduler"]["step_size"],
-                gamma=self.config["optim"]["scheduler"]["decay_factor"],
+                step_size=self.config["scheduler"]["step_size"],
+                gamma=self.config["scheduler"]["decay_factor"],
             )
         else:
             scheduler = None
