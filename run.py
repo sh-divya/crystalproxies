@@ -11,8 +11,9 @@ from pytorch_lightning.loggers.logger import DummyLogger
 from dave.proxies.models import make_model
 from dave.proxies.pl_modules import ProxyModule
 from dave.utils.callbacks import get_checkpoint_callback
-from dave.utils.loaders import make_loaders, update_loaders
+from dave.utils.loaders import make_loaders
 from dave.utils.misc import load_config, parse_tags, print_config, set_seeds
+from dave.utils.gnn import Pyxtal_loss
 
 warnings.filterwarnings("ignore", ".*does not have many workers.*")
 
@@ -24,8 +25,8 @@ if __name__ == "__main__":
 
     args = sys.argv[1:]
     if all("config" not in arg for arg in args):
-        # args.append("--debug")
-        args.append("--config=mlp-mp20")
+        args.append("--debug")
+        args.append("--config=pyxtal_faenet-mbform")
         # args.append("--optim.scheduler.name=StepLR")
         warnings.warn("No config file specified, using default !")
         sys.argv[1:] = args
@@ -44,6 +45,7 @@ if __name__ == "__main__":
             notes=config["wandb_note"],
             tags=parse_tags(config["wandb_tags"]),
         )
+        config["wandb_url"] = logger.experiment.url
     else:
         logger = DummyLogger()
         print(
@@ -68,16 +70,19 @@ if __name__ == "__main__":
             get_checkpoint_callback(
                 config["run_dir"],
                 logger,
-                monitor="full_val_mae",
+                monitor="total_val_mae",
                 mode=callbacks[0].mode,
             )
         ]
 
     # Make module
-    criterion = nn.MSELoss()
+
+    if config["config"].startswith("pyxtal"):
+        criterion = Pyxtal_loss()
+    else: 
+        criterion = nn.MSELoss()
     # device = "cuda" if torch.cuda.is_available() else "cpu"
     module = ProxyModule(model, criterion, config)  # .to(device)
-    epochs = config["optim"]["epochs"] if crossval == 1 else 1
 
     # Make PL trainer
     trainer = pl.Trainer(
@@ -91,23 +96,11 @@ if __name__ == "__main__":
     # Start training
     s = time.time()
 
-    if epochs > 1:
-        trainer.fit(
-            model=module,
-            train_dataloaders=loaders["train"],
-            val_dataloaders=loaders["val"],
-        )
-    else:
-        epochs = config["optim"]["epochs"]
-        for _ in range(epochs):
-            trainer.fit(
-                model=module,
-                train_dataloaders=loaders["train"],
-                val_dataloaders=loaders["val"],
-            )
-            if crossval > 1:
-                trainer.fit_loop.epoch_progress.reset_on_run()
-                loaders = update_loaders(loaders["train"], loaders["val"])
+    trainer.fit(
+        model=module,
+        train_dataloaders=loaders["train"],
+        val_dataloaders=loaders["val"],
+    )
 
     t = time.time() - s
 
