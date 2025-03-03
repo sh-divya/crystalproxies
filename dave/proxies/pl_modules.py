@@ -17,7 +17,7 @@ class ProxyModule(pl.LightningModule):
         self.criterion = loss
         self.lr = config["optim"]["lr"]
         self.loss = 0
-        self.config = {**config["model"], **config["optim"]}
+        self.config = {k: v for k, v in config.items() if k not in ["root", "src"]}
         self.mae = MeanAbsoluteError()
         self.mse = MeanSquaredError()
         self.best_mae = 10e6
@@ -97,18 +97,18 @@ class ProxyModule(pl.LightningModule):
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), self.lr)
-        if self.config["scheduler"]["name"] == "ReduceLROnPlateau":
+        if self.config["optim"]["scheduler"]["name"] == "ReduceLROnPlateau":
             scheduler = optim.lr_scheduler.ReduceLROnPlateau(
                 optimizer,
-                factor=self.config["scheduler"]["decay_factor"],
-                patience=self.config["scheduler"].get("patience")
-                or self.config["es_patience"],
+                factor=self.config["optim"]["scheduler"]["decay_factor"],
+                patience=self.config["optim"]["scheduler"].get("patience")
+                or self.config["optim"]["es_patience"],
             )
-        elif self.config["scheduler"]["name"] == "StepLR":
+        elif self.config["optim"]["scheduler"]["name"] == "StepLR":
             scheduler = optim.lr_scheduler.StepLR(
                 optimizer,
-                step_size=self.config["scheduler"]["step_size"],
-                gamma=self.config["scheduler"]["decay_factor"],
+                step_size=self.config["optim"]["scheduler"]["step_size"],
+                gamma=self.config["optim"]["scheduler"]["decay_factor"],
             )
         else:
             scheduler = None
