@@ -8,9 +8,14 @@ from dave.proxies.models import make_model, ProxyEmbeddingModel
 
 
 class DavePredictor(nn.Module):
-    def __init__(self, arch="physmlp", path_to_weights=None):
+    def __init__(self, arch="physmlp", path_to_weights=None, device="cpu"):
         super().__init__()
-
+        if isinstance(device, torch.device):
+            pass
+        elif isinstance(device, str):
+            device = torch.device(device)
+        else:
+            raise TypeError(f"Please specify {device} as either string or torch object")
         if arch in ["physmlp"]:
             self.arch = arch
         else:
@@ -18,7 +23,7 @@ class DavePredictor(nn.Module):
         try:
             ckpt_path = Path(path_to_weights)
             self.ckpt_fptr = ckpt_path / f"{arch}.ckpt"
-            ckpt = torch.load(self.ckpt_fptr)
+            ckpt = torch.load(self.ckpt_fptr, map_location=device)
             model_hp = ckpt["hyper_parameters"]
 
             self.ckpt_config = {}
@@ -33,6 +38,7 @@ class DavePredictor(nn.Module):
             self.ckpt_config["lat_size"] = model_hp["lat_size"]
             self.ckpt_config["alphabet"] = model_hp["alphabet"]
             self.proxy = make_model(self.ckpt_config)
+
             self.proxy.load_state_dict(
                 {k[6:]: v for k, v in ckpt["state_dict"].items()}
             )
