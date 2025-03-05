@@ -17,7 +17,7 @@ The code runs on python>=3.9,<3.12, and the required packages can be installed u
 ```bash
 pip install -r requirements_base.txt
 ```
-Followed by installing Phast and torhc-geomtric dependencies using
+Followed by installing Phast and torch-geomtric dependencies using
 ```bash
 pip install -r requirements_extra.txt
 ```

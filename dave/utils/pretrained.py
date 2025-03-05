@@ -18,8 +18,8 @@ class DavePredictor(nn.Module):
         try:
             ckpt_path = Path(path_to_weights)
             self.ckpt_fptr = ckpt_path / f"{arch}.ckpt"
-            self.ckpt = torch.load(self.ckpt_fptr)
-            model_hp = self.ckpt["hyper_parameters"]
+            ckpt = torch.load(self.ckpt_fptr)
+            model_hp = ckpt["hyper_parameters"]
 
             self.ckpt_config = {}
             self.ckpt_config["model"] = model_hp["model"]
@@ -33,18 +33,16 @@ class DavePredictor(nn.Module):
             self.ckpt_config["lat_size"] = model_hp["lat_size"]
             self.ckpt_config["alphabet"] = model_hp["alphabet"]
             self.proxy = make_model(self.ckpt_config)
+            self.proxy.load_state_dict(
+                {k[6:]: v for k, v in ckpt["state_dict"].items()}
+            )
+            self.proxy.eval()
 
             self.xscale = model_hp["scales"]["x"]
             self.yscale = model_hp["scales"]["y"]
         except TypeError:
             print(f"Please enter path to where weights are store for {arch} model")
             raise Exception
-
-    def load(self):
-        self.proxy.load_state_dict(
-            {k[6:]: v for k, v in self.ckpt["state_dict"].items()}
-        )
-        self.proxy.eval()
 
     def __call__(self, x, scale_input=False):
         if scale_input:
