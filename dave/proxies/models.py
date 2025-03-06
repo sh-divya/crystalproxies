@@ -262,8 +262,12 @@ class ProxyEmbeddingModel(nn.Module):
         """
         super().__init__()
         self.use_comp_phys_embeds = comp_phys_embeds["use"]
-
         # Physical embeddings for atom types
+        # if alphabet:
+        #     n_elements = max(alphabet) + 1
+        # else:
+        #     n_elements = comp_size
+
         if self.use_comp_phys_embeds:
             self.phys_emb = PhysEmbedding(
                 z_emb_size=comp_phys_embeds["z_emb_size"],
@@ -786,11 +790,14 @@ class Pyxtal_FAENet(nn.Module):
         self.frame_averaging = frame_averaging
         # TODO: REMOVE this two when FAENet package is updated
         self.faenet.embed_block.emb = nn.Embedding(
-            100, kwargs["hidden_channels"] - kwargs["phys_hidden_channels"] - 2 * kwargs["pg_hidden_channels"]
+            100,
+            kwargs["hidden_channels"]
+            - kwargs["phys_hidden_channels"]
+            - 2 * kwargs["pg_hidden_channels"],
         )
         # self.faenet.distance_expansion = GaussianSmearing(0.0, self.faenet.cutoff, self.faenet.num_gaussians)
         self.faenet.forward = self.faenet_forward
-    
+
     def faenet_forward(self, data, mode="train", preproc=True):
         """Main Forward pass.
 
@@ -810,7 +817,7 @@ class Pyxtal_FAENet(nn.Module):
         # predict energy
         preds = self.faenet.energy_forward(data, preproc)
 
-        # Predict atom positions 
+        # Predict atom positions
         preds["forces"] = self.faenet.forces_forward(preds)
 
         return preds
