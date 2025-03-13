@@ -20,7 +20,7 @@ model:
     space_group_size: 16 # embedding size of the space group's free embedding
     point_symmetry_size: 16 # embedding size of the space group's point symmetry's free embedding
     cl_system_size: 16 # embedding size of the space group's crystal lattice system's free embedding
-
+    sg_yaml: /network/scratch/d/divya.sharma/crystals/data/crystallograpy/yaml
 optim:
   batch_size: 196
   lr: 0.0014

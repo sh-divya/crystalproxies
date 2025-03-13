@@ -283,8 +283,25 @@ class ProxyEmbeddingModel(nn.Module):
             )
 
         # Symmetry-based embeddings for space groups
+        # Symmetry-based embeddings for space groups
         if sg_encoder_config.get("use"):
-            self.sg_emb = SpaceGroupEncoder(**sg_encoder_config)
+            if sg_encoder_config.get("sg_yaml"):
+                base = sg_encoder_config["sg_yaml"]
+                pointsymms = safe_load(open(str(Path(base) / "point_symmetries.yaml")))
+                cryslatsys = safe_load(
+                    open(str(Path(base) / "crystal_lattice_systems.yaml"))
+                )
+            else:
+                try:
+                    from crystallograpy import pointsymms, cryslatsys
+                except ImportError:
+                    print(
+                        "Please configure crystallograpy repo or pass the path to the relevant YAML files"
+                    )
+                    raise ImportError
+            self.sg_emb = SpaceGroupEncoder(
+                **sg_encoder_config, sg_to_ps_dict=pointsymms, sg_to_cls_dict=cryslatsys
+            )
             sg_emb_size = self.sg_emb.output_size
         else:
             # basic space groups embedding
@@ -502,6 +519,8 @@ class SpaceGroupEncoder(nn.Module):
         space_group_size=16,
         point_symmetry_size=16,
         cl_system_size=16,
+        sg_to_ps_dict={},
+        sg_to_cls_dict={},
         **kwargs,
     ):
         """
@@ -558,13 +577,11 @@ class SpaceGroupEncoder(nn.Module):
             else None
         )
         self.cl_system_encoder = (
-            nn.Embedding(8 + 1, point_symmetry_size)
-            if point_symmetry_size > 0
-            else None
+            nn.Embedding(8 + 1, cl_system_size) if cl_system_size > 0 else None
         )
 
         # Make tensor that maps space groups to point symmetries
-        sg_to_ps_dict = safe_load(open(FILES["ps"]))
+        # sg_to_ps_dict = safe_load(open(FILES["ps"]))
         sg_to_ps_dict = {
             sg: ps for ps, psd in sg_to_ps_dict.items() for sg in psd["space_groups"]
         }
@@ -574,7 +591,7 @@ class SpaceGroupEncoder(nn.Module):
         self.register_buffer("sg_to_ps", sg_to_ps)
 
         # Make tensor that maps space groups to crystal lattice systems
-        sg_to_cls_dict = safe_load(open(FILES["cls"]))
+        # sg_to_cls_dict = safe_load(open(FILES["cls"]))
         sg_to_cls_dict = {
             sg: cls
             for cls, clsd in sg_to_cls_dict.items()
@@ -692,7 +709,7 @@ class SpaceGroupEncoder(nn.Module):
                 encoder is not available.
         """
         if self.cl_system_encoder:
-            return self.cl_system_encoder(self.sg_to_ps[space_group])
+            return self.cl_system_encoder(self.sg_to_cls[space_group])
 
     def forward(self, space_group: int, as_dict=False):
         """

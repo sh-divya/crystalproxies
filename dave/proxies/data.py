@@ -145,12 +145,6 @@ class CrystalFeat(Dataset):
         lat = self.lattice[idx]
         comp = self.composition[idx]
         target = self.y[idx]
-        if self.wyckoff is not None:
-            wyck = torch.tensor(
-                parse_wyckoff(self.wyckoff.iloc[idx]), dtype=torch.int32
-            )
-        else:
-            wyck = None
         if self.xtransform:
             lat = ((lat - self.xtransform["mean"]) / self.xtransform["std"]).to(
                 torch.float32
