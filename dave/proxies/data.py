@@ -22,7 +22,22 @@ from dave.utils.atoms_to_graph import (
     pymatgen_structure_to_graph,
 )
 
-def composition_df_to_z_tensor(comp_df, max_z=-1):
+def parse_wyckoff(wyckoff):
+    table = fetch_table("elements").loc[:, ["atomic_number", "symbol"]]
+    table = table.set_index("symbol")
+    new_wyck = []
+    wyckoff = wyckoff.split("-")
+    for item in wyckoff:
+        item = item.strip("()").split(",")
+        z = table.at[item[0], "atomic_number"]
+        w = int(item[1])
+        new_wyck.append([z, w])
+
+    for _ in range(228 - len(wyckoff)):
+        new_wyck.append([0, 0])
+    return new_wyck
+
+def composition_df_to_z_tensor(comp_df, max_z=-1, all_elems=None):
     """
     Transforms a dataframe with missing species to a complete tensor with composition
     for all elements up to max_z.
@@ -30,14 +45,25 @@ def composition_df_to_z_tensor(comp_df, max_z=-1):
     Args:
         comp_df (pd.DataFrame): The csv data as a DataFrame
         max_z (int, optional): Maximum atomic number in the data set. Defaults to -1.
+        all_elems (list[str], optional): list of elems
     """
     table = fetch_table("elements").loc[:, ["atomic_number", "symbol"]]
     table = table.set_index("symbol")
     if max_z == -1:
         max_z = table.loc[comp_df.columns[-1], "atomic_number"]
+    if all_elems != None:
+        max_z_data = table.loc[all_elems, "atomic_number"].max()
+    else:
+        max_z_data = -1
+    # print("Input Max Z", max_z)
+    # print("Max Z data", max_z_data)
     z = np.zeros((len(comp_df), max_z + 1))
     for col in comp_df.columns:
-        z[:, table.loc[col, "atomic_number"]] = comp_df[col].values
+        elem = table.loc[col, "atomic_number"]
+        # removing columns that have elements with atomic number
+        # more than max_z
+        if elem <= max_z:
+            z[:, table.loc[col, "atomic_number"]] = comp_df[col].values
     return torch.tensor(z, dtype=torch.int32)
 
 def formulae_to_z_tensor(formulae, max_z=-1):
@@ -89,7 +115,14 @@ def formulae_to_z_tensor(formulae, max_z=-1):
 
 class CrystalFeat(Dataset):
     def __init__(
-        self, root, target, write=False, subset="train", scalex=False, scaley=False
+        self,
+        root,
+        target,
+        write=False,
+        subset="train",
+        scalex=False,
+        scaley=False,
+        max_z=94,
     ):
         csv_path = root
         self.subsets = {}
@@ -123,6 +156,7 @@ class CrystalFeat(Dataset):
             H_index = sub_cols.index("H")  # should be 8
             # N x (max_z + 1) -> H is index 1
             self.composition = composition_df_to_z_tensor(data_df[sub_cols[H_index:]])
+
         # N
         self.sg = torch.tensor(data_df["Space Group"].values, dtype=torch.int32)
         # N x 6
@@ -130,6 +164,10 @@ class CrystalFeat(Dataset):
             data_df[["a", "b", "c", "alpha", "beta", "gamma"]].values,
             dtype=torch.float32,
         )
+        try:
+            self.wyckoff = torch.from_numpy(parse_wyckoff(data_df["Wyckoff"]))
+        except KeyError:
+            self.wyckoff = None
 
         # To directly handle missing atomic numbers
         # missing_atoms = torch.zeros(x.shape[0], 5)
@@ -145,6 +183,11 @@ class CrystalFeat(Dataset):
         lat = self.lattice[idx]
         comp = self.composition[idx]
         target = self.y[idx]
+
+        if self.wyckoff is not None:
+            wyck = self.wyckoff[idx]
+        else:
+            wyck = None
         if self.xtransform:
             lat = ((lat - self.xtransform["mean"]) / self.xtransform["std"]).to(
                 torch.float32
@@ -153,7 +196,7 @@ class CrystalFeat(Dataset):
             target = ((target - self.ytransform["mean"]) / self.ytransform["std"]).to(
                 torch.float32
             )
-        return (comp, sg, lat), target
+        return (comp, sg, lat, wyck), target
 
 
 class CrystalGraph(InMemoryDataset):

@@ -20,27 +20,28 @@ if __name__ == "__main__":
     args = args.name
 
     targets = {
-        "matbench_mp_e_form": "Eform",
-        "matbench_mp_gap": "Band Gap",
-        "mp20": "formation_energy_per_atom",
-        "nrcc_ionic_conductivity": "Ionic conductivity (S cm-1)",
+        "matbench_mp_e_form": ["Eform", 94],
+        "mb_eform_sg_filter": ["Eform", 94],
+        "matbench_mp_gap": ["Band Gap", 94],
+        "mp20": ["formation_energy_per_atom", -1],
+        "nrcc_ionic_conductivity": ["Ionic conductivity (S cm-1)", -1],
     }
 
     csv = csv_path / args
 
-    data = CrystalFeat(csv, targets[args], subset="train")
+    data = CrystalFeat(csv, targets[args][0], subset="train", max_z=targets[args][1])
     loader = DataLoader(data, batch_size=len(data))
     for x, y in loader:
         m1 = x[-2].mean(dim=0)
         s1 = x[-2].std(dim=0)
-        torch.save(m1, csv / "x.mean")
-        torch.save(s1, csv / "x.std")
-
         m2 = y.mean(dim=0)
         s2 = y.std(dim=0)
+
+        torch.save(m1, csv / "x.mean")
+        torch.save(s1, csv / "x.std")
         torch.save(m2, csv / "y.mean")
         torch.save(s2, csv / "y.std")
-        print(x[0].shape)
-        print(x[1].shape)
-        print(x[2].shape)
-        print(x[3].shape)
+    print(x[0].shape)
+    print(x[1].shape)
+    print(x[2].shape)
+    print(x[3].shape)
