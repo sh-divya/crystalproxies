@@ -24,8 +24,6 @@ model:
   wyck_encoder:
     use: True
     wyck_embed_size: 64
-    # wyck_lm_yaml: /network/scratch/d/divya.sharma/crystals/data # path to dir that contains wyckoff LM embeddings
-
 optim:
   batch_size: 448
   lr: 0.0017

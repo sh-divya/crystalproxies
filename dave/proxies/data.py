@@ -183,6 +183,7 @@ class CrystalFeat(Dataset):
         lat = self.lattice[idx]
         comp = self.composition[idx]
         target = self.y[idx]
+
         if self.wyckoff is not None:
             wyck = self.wyckoff[idx]
         else:

@@ -265,8 +265,12 @@ class ProxyEmbeddingModel(nn.Module):
         """
         super().__init__()
         self.use_comp_phys_embeds = comp_phys_embeds["use"]
-
         # Physical embeddings for atom types
+        # if alphabet:
+        #     n_elements = max(alphabet) + 1
+        # else:
+        #     n_elements = comp_size
+
         if self.use_comp_phys_embeds:
             self.phys_emb = PhysEmbedding(
                 z_emb_size=comp_phys_embeds["z_emb_size"],
@@ -281,6 +285,7 @@ class ProxyEmbeddingModel(nn.Module):
                 comp_num_layers, comp_hidden_channels, comp_size
             )
 
+        # Symmetry-based embeddings for space groups
         # Symmetry-based embeddings for space groups
         if sg_encoder_config.get("use"):
             if sg_encoder_config.get("sg_yaml"):
@@ -297,8 +302,7 @@ class ProxyEmbeddingModel(nn.Module):
                         "Please configure crystallograpy repo or pass the path to the relevant YAML files"
                     )
                     raise ImportError
-            # sg_encoder_config["sg_to_ps_dict"] = pointsymms
-            # sg_encoder_config["sg_to_cls_dict"] = cryslatsys
+
             self.sg_emb = SpaceGroupEncoder(
                 **sg_encoder_config, sg_to_ps_dict=pointsymms, sg_to_cls_dict=cryslatsys
             )
@@ -602,7 +606,7 @@ class SpaceGroupEncoder(nn.Module):
             else None
         )
         self.cl_system_encoder = (
-            nn.Embedding(8 + 1, cl_system_size) if point_symmetry_size > 0 else None
+            nn.Embedding(8 + 1, cl_system_size) if cl_system_size > 0 else None
         )
 
         # Make tensor that maps space groups to point symmetries
@@ -876,11 +880,14 @@ class Pyxtal_FAENet(nn.Module):
         self.frame_averaging = frame_averaging
         # TODO: REMOVE this two when FAENet package is updated
         self.faenet.embed_block.emb = nn.Embedding(
-            100, kwargs["hidden_channels"] - kwargs["phys_hidden_channels"] - 2 * kwargs["pg_hidden_channels"]
+            100,
+            kwargs["hidden_channels"]
+            - kwargs["phys_hidden_channels"]
+            - 2 * kwargs["pg_hidden_channels"],
         )
         # self.faenet.distance_expansion = GaussianSmearing(0.0, self.faenet.cutoff, self.faenet.num_gaussians)
         self.faenet.forward = self.faenet_forward
-    
+
     def faenet_forward(self, data, mode="train", preproc=True):
         """Main Forward pass.
 
@@ -900,7 +907,7 @@ class Pyxtal_FAENet(nn.Module):
         # predict energy
         preds = self.faenet.energy_forward(data, preproc)
 
-        # Predict atom positions 
+        # Predict atom positions
         preds["forces"] = self.faenet.forces_forward(preds)
 
         return preds

@@ -56,13 +56,12 @@ if __name__ == "__main__":
     # create dataloaders and model
     loaders = make_loaders(config)
     model = make_model(config)
-    crossval = int(config.get("crossval", 1))
 
     # setup PL callbacks
     callbacks = []
     callbacks += [
         EarlyStopping(
-            monitor="full_val_mae", patience=config["optim"]["es_patience"], mode="min"
+            monitor="val_mae", patience=config["optim"]["es_patience"], mode="min"
         )
     ]
     if not config.get("debug"):
@@ -86,7 +85,7 @@ if __name__ == "__main__":
 
     # Make PL trainer
     trainer = pl.Trainer(
-        max_epochs=epochs,
+        max_epochs=config["optim"]["epochs"],
         logger=logger,
         log_every_n_steps=1,
         callbacks=callbacks,
