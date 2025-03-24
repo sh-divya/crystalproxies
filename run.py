@@ -43,7 +43,7 @@ if __name__ == "__main__":
             name=config["wandb_run_name"],
             entity=config["wandb_entity"],
             notes=config["wandb_note"],
-            tags=parse_tags(config["wandb_tags"]),
+            tags=config["wandb_tags"],
         )
         config["wandb_url"] = logger.experiment.url
     else:

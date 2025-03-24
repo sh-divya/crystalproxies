@@ -103,10 +103,10 @@ class CrystalFeat(Dataset):
             "energy_per_atom",
             "Eform",
             "Band Gap",
-            "Ionic conductivity (S cm-1)",
             "cif",
-            "DOI",
-            "Wyckoff",
+            # "Ionic conductivity (S cm-1)",
+            # "DOI",
+            # "Wyckoff",
         ]
         self.root = root
         self.xtransform = scalex

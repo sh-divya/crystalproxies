@@ -53,9 +53,9 @@ def make_model(config):
             sg_emb_size=config["model"]["sg_emb_size"],
             comp_phys_embeds=config["model"]["comp_phys_embeds"],
             alphabet=config["alphabet"],
-            sg_encoder_config=config["model"].get("sg_encoder", {}),
+            # sg_encoder_config=config["model"].get("sg_encoder", {}),
         )
-        model.apply(weights_init)
+        # model.apply(weights_init)
         return model
     # Graph model without 3D pos.
     elif config["config"].startswith("graph-"):
@@ -285,6 +285,7 @@ class ProxyEmbeddingModel(nn.Module):
         # Symmetry-based embeddings for space groups
         # Symmetry-based embeddings for space groups
         if sg_encoder_config.get("use"):
+            print("Should be False")
             if sg_encoder_config.get("sg_yaml"):
                 base = sg_encoder_config["sg_yaml"]
                 pointsymms = safe_load(open(str(Path(base) / "point_symmetries.yaml")))
@@ -304,6 +305,7 @@ class ProxyEmbeddingModel(nn.Module):
             )
             sg_emb_size = self.sg_emb.output_size
         else:
+            print("Should be Here")
             # basic space groups embedding
             self.sg_emb = nn.Embedding(231, sg_emb_size)
 
@@ -327,6 +329,7 @@ class ProxyEmbeddingModel(nn.Module):
             self._alphabet = torch.Tensor(alphabet)
         self.register_buffer("alphabet", self._alphabet)
 
+
     def forward(self, x, batch=None):
         comp_x, sg_x, lat_x = x
         # comp_x -> batch_size x n_elements=89
@@ -347,21 +350,21 @@ class ProxyEmbeddingModel(nn.Module):
             )
             # comp_x = self.phys_emb(self.alphabet[z].to(torch.int32))
             comp_x = self.phys_emb(z).to(torch.int32)
-            comp_h = scatter(comp_x, batch_mask, dim=0, reduce="mean")
+            comp_x = scatter(comp_x, batch_mask, dim=0, reduce="mean")
         else:
-            comp_h = self.comp_emb_mlp(comp_x)
+            comp_x = self.comp_emb_mlp(comp_x)
 
         # Process the space group
-        sg_h = self.sg_emb(sg_x).squeeze(1)
+        sg_x = self.sg_emb(sg_x).squeeze(1)
 
         # Process the lattice
-        lat_h = self.lat_emb_mlp(lat_x)
+        lat_x = self.lat_emb_mlp(lat_x)
 
         # TODO: add a counter for the number of atoms in the unit cell
 
         # Concatenate and predict
-        h = torch.cat((comp_h, sg_h, lat_h), dim=-1)
-        return self.prediction_head(h)
+        x = torch.cat((comp_x, sg_x, lat_x), dim=-1)
+        return self.prediction_head(x)
 
 
 class ProxyGraphModel(nn.Module):
