@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "dave"
-version = "2.0.3"
+version = "2.1.0"
 description = "DAVE proxy for the Crystals GFlowNet - Conventional cell @ MatBench"
 authors = [
     "vict0rsch <vsch@pm.me>",

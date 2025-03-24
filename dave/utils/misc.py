@@ -237,12 +237,14 @@ def load_scales(config):
 
     for scale, scale_conf in config["scales"].items():
         if "load" in scale_conf:
-            src = config["src"].replace("$root", config["root"])
-            if src.startswith("/"):
-                src = resolve(src)
+            if config.get("root"):
+                src = config["src"].replace("$root", config["root"])
             else:
-                src = ROOT / src
-
+                src = config["src"].replace("$root", str(ROOT))
+                if src.startswith("/"):
+                    src = resolve(src)
+                else:
+                    src = ROOT / src
             assert "mean" in scale_conf and "std" in scale_conf
 
             if scale_conf["load"] == "torch":
@@ -450,7 +452,21 @@ def prepare_for_gfn(
 
     return model, proxy_loaders, scales
 
+def parse_tags(wandb_tags):
+    """
+    Parse wandb tags from a string or return the input list.
+    Return the input as-is if not a string.
 
+    Args:
+        wandb_tags (str): Comma-separated string of tags.
+
+    Returns:
+        list: List of tags.
+    """
+    if isinstance(wandb_tags, str):
+        return wandb_tags.split(",")
+    return wandb_tags
+  
 def run_command(command):
     """
     Run a shell command and return the output.

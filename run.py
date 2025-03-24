@@ -1,6 +1,6 @@
-import warnings
 import sys
 import time
+import warnings
 
 import pytorch_lightning as pl
 import torch.nn as nn
@@ -12,7 +12,7 @@ from dave.proxies.models import make_model
 from dave.proxies.pl_modules import ProxyModule
 from dave.utils.callbacks import get_checkpoint_callback
 from dave.utils.loaders import make_loaders
-from dave.utils.misc import load_config, print_config, set_seeds
+from dave.utils.misc import load_config, parse_tags, print_config, set_seeds
 from dave.utils.gnn import Pyxtal_loss
 
 warnings.filterwarnings("ignore", ".*does not have many workers.*")
@@ -43,7 +43,7 @@ if __name__ == "__main__":
             name=config["wandb_run_name"],
             entity=config["wandb_entity"],
             notes=config["wandb_note"],
-            tags=config["wandb_tags"],
+            tags=parse_tags(config["wandb_tags"]),
         )
         config["wandb_url"] = logger.experiment.url
     else:
@@ -75,6 +75,7 @@ if __name__ == "__main__":
         ]
 
     # Make module
+
     if config["config"].startswith("pyxtal"):
         criterion = Pyxtal_loss()
     else: 
@@ -93,11 +94,13 @@ if __name__ == "__main__":
 
     # Start training
     s = time.time()
+
     trainer.fit(
         model=module,
         train_dataloaders=loaders["train"],
         val_dataloaders=loaders["val"],
     )
+
     t = time.time() - s
 
     # Inference time
@@ -107,6 +110,7 @@ if __name__ == "__main__":
 
     # End of training
     if logger:
-        logger.experiment.summary["trainer-time"] = t
-        logger.experiment.summary["inference-time"] = inf_t
+        if isinstance(logger.experiment.summary, dict):
+            logger.experiment.summary["trainer-time"] = t
+            logger.experiment.summary["inference-time"] = inf_t
         logger.experiment.finish()

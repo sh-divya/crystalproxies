@@ -22,7 +22,6 @@ from dave.utils.atoms_to_graph import (
     pymatgen_structure_to_graph,
 )
 
-
 def composition_df_to_z_tensor(comp_df, max_z=-1):
     """
     Transforms a dataframe with missing species to a complete tensor with composition
@@ -40,7 +39,6 @@ def composition_df_to_z_tensor(comp_df, max_z=-1):
     for col in comp_df.columns:
         z[:, table.loc[col, "atomic_number"]] = comp_df[col].values
     return torch.tensor(z, dtype=torch.int32)
-
 
 def formulae_to_z_tensor(formulae, max_z=-1):
     """
@@ -105,7 +103,10 @@ class CrystalFeat(Dataset):
             "energy_per_atom",
             "Eform",
             "Band Gap",
+            "Ionic conductivity (S cm-1)",
             "cif",
+            "DOI",
+            "Wyckoff",
         ]
         self.root = root
         self.xtransform = scalex
@@ -152,7 +153,6 @@ class CrystalFeat(Dataset):
             target = ((target - self.ytransform["mean"]) / self.ytransform["std"]).to(
                 torch.float32
             )
-
         return (comp, sg, lat), target
 
 

@@ -48,10 +48,16 @@ parameters:
 
   optim.batch_size:
     values: [16, 32, 64, 128, 256]
+  optim.es_patience:
+    values: [3,5,7]
   optim.lr:
     distribution: log_uniform_values
     min: 0.0003
     max: 0.003
+  optim.epochs:
+    values: [20, 25, 30, 40]
+  optim.scheduler.name:
+    values: ["StepLR", "ReduceLROnPlateau", ""]
 
 command:
   - ${env}

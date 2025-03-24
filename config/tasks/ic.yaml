@@ -1,5 +1,6 @@
-src: $root/dave/proxies/nrcc_ionic_conductivity
-target: IC
+src: $root/nrcc_ionic_conductivity
+crossval: 5
+target: Ionic conductivity (S cm-1)
 scales:
   x:
     load: torch

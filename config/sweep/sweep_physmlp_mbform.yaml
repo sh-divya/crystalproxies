@@ -41,7 +41,7 @@ parameters:
   optim.epochs:
     values: [100]
   optim.scheduler.name:
-    values: ["ReduceLROnPlateau"]
+    values: ["StepLR", "ReduceLROnPlateau", ""]
 
 command:
   - ${env}
@@ -51,4 +51,5 @@ command:
   - "physmlp-mbform"
   - "--wandb_entity=mila-ocp"
   - "--wandb_project=Dave-MBform"
+  - "--wandb_tags=spacegroup-encoder"
   - ${args}

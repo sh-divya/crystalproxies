@@ -8,6 +8,7 @@ from torch_geometric.loader import DataLoader as GraphLoader
 from dave.proxies.data import CrystalFeat, CrystalGraph
 from dave.utils.misc import ROOT, resolve
 
+import numpy as np
 
 def make_loaders(config):
     data_root = copy(ROOT)
@@ -30,6 +31,7 @@ def make_loaders(config):
         name = "matbench_mp_e_gap"
     elif data == "ic":
         name = "nrcc_ionic_conductivity"
+
     else:
         raise ValueError(f"Unknown config: {config['config']}")
 

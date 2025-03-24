@@ -50,7 +50,12 @@ The 'config' folder will contain configurations/hyperparameter dictionaries to s
 `wandb sweep path_to_file/sweep_wandb.yml --name=’test’`. Store the **sweep_id**
 3. **Launch a sweep agent** using a slurm script with
 `sbatch sweep_mlp.sh` which contains `wandb agent --count 5 mila-ocp/ocp/sweep_id`. The count specificies the number of hyperparam settings to test. To launch several agents (i.e. gpus), use `sbtach --array=0-5`.
-4. **Visualise** the results in sweeps section of wandb, under the ActiveLearningMaterials repo.
+
+4. **Visualise** the results in sweeps section of wandb, under the ActiveLearningMaterials repo. 
+
+## SpaceGroup Encoder
+
+Install [this repo](https://github.com/alexhernandezgarcia/crystallograpy) as a python package.
 
 # Python version
 
