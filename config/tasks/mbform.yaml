@@ -1,4 +1,4 @@
-root: /network/scratch/d/divya.sharma/crystals/data/materials_dataset_v6/
+root: /network/scratch/d/divya.sharma/crystals/data/materials_dataset_v5/
 src: $root/data/matbench_mp_e_form
 target: Eform
 scales:
@@ -12,7 +12,7 @@ scales:
     std: $src/y.std
 comp_size: 95
 lat_size: 6
-wyck_max: 22
+wyck_max: 228
 alphabet: [
   1,
   3,

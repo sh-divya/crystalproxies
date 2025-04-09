@@ -16,8 +16,8 @@ class DavePredictor(nn.Module):
             device = torch.device(device)
         else:
             raise TypeError(f"Please specify {device} as either string or torch object")
-        if arch in ["physmlp"]:
-            self.arch = arch
+        if arch in ["physmlp", "wyckomp"]:
+            self.arch = "physmlp"
         else:
             raise ValueError(f"{arch} not available as saved weights")
         try:
@@ -31,9 +31,9 @@ class DavePredictor(nn.Module):
 
             self.target = model_hp["target"]
             if self.target == "Eform":
-                self.ckpt_config["config"] = f"{arch}-mbform"
+                self.ckpt_config["config"] = f"{self.arch}-mbform"
             elif self.target == "Band Gap":
-                self.ckpt_config["config"] = f"{arch}-mbgap"
+                self.ckpt_config["config"] = f"{self.arch}-mbgap"
             self.ckpt_config["comp_size"] = model_hp["comp_size"]
             self.ckpt_config["lat_size"] = model_hp["lat_size"]
             self.ckpt_config["alphabet"] = model_hp["alphabet"]
@@ -51,10 +51,14 @@ class DavePredictor(nn.Module):
             raise Exception
 
     def __call__(self, x, scale_input=False):
+        if len(x) == 3:
+            wy_x = torch.tensor[[0, 0]] * x[1].shape[0]
+            x = (x[0], x[1], x[2], wy_x)
+        assert len(x) == 4, "Input should consist of comp, sg, lat (and wy if using wyckoff) only"
         if scale_input:
-            comp, sg, lat = x
+            comp, sg, lat, wy = x
             lat = (lat - self.xscale["mean"]) / self.xscale["std"]
-            x = (comp, sg, lat)
+            x = (comp, sg, lat, wy)
         if self.yscale:
             return (self.proxy(x) * self.yscale["std"]) + self.yscale["mean"]
         else:

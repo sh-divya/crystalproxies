@@ -30,8 +30,6 @@ class ProxyModule(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         x, y = preprocess_data(batch, self.preproc_method)
         out = self.model(x, batch_idx).squeeze(-1)
-        # if batch_idx == 0:
-        #     print(self.model.wyck_emb.embedding_layer.weight)
         if self.model_name == "pyxtal_faenet":
             loss = self.criterion(out, y, batch)
         else:

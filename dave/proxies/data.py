@@ -154,6 +154,8 @@ class CrystalFeat(Dataset):
         try:
             self.wyckoff = torch.tensor(parse_wyckoff(data_df["Wyckoff"], kwargs["wyck_max"]))
         except KeyError:
+            if "wyck_max" not in kwargs:
+                raise Exception
             self.wyckoff = None
 
         # To directly handle missing atomic numbers
@@ -174,7 +176,7 @@ class CrystalFeat(Dataset):
         if self.wyckoff is not None:
             wyck = self.wyckoff[idx]
         else:
-            wyck = None
+            wyck = torch.tensor([0, 0]).unsqueeze(-2)
 
         if self.xtransform:
             lat = ((lat - self.xtransform["mean"]) / self.xtransform["std"]).to(
