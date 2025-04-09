@@ -59,12 +59,14 @@ def make_loaders(config):
         )
     else:
         load_class = DataLoader
+        wyck_max = config.get("wyck_max", None)
         trainset = CrystalFeat(
             root=config["src"].replace("$root", str(data_root)),
             target=config["target"],
             subset="train",
             scalex=config["scales"]["x"],
             scaley=config["scales"]["y"],
+            wyck_max=wyck_max
         )
         valset = CrystalFeat(
             root=config["src"].replace("$root", str(data_root)),
@@ -72,6 +74,7 @@ def make_loaders(config):
             subset="val",
             scalex=config["scales"]["x"],
             scaley=config["scales"]["y"],
+            wyck_max=wyck_max
         )
 
     return {

@@ -89,9 +89,31 @@ def formulae_to_z_tensor(formulae, max_z=-1):
     return comp_tensor.to(torch.int32)
 
 
+def parse_wyckoff(wyckoff, wyck_max=None):
+    if wyck_max is None:
+        wyck_max = 228
+    table = fetch_table("elements").loc[:, ["atomic_number", "symbol"]]
+    table = table.set_index("symbol")
+    all_wyck = []
+    for _, wyck in wyckoff.items():
+        new_wyck = []
+        wyck = wyck.split("-")
+        for item in wyck:
+            item = item.strip("()").split(",")
+            z = table.loc[item[0], "atomic_number"]
+            w = int(item[1])
+            new_wyck.append([z, w])
+
+        for _ in range(wyck_max - len(wyck)):
+            new_wyck.append([0, 0])
+
+        all_wyck.append(new_wyck)
+    return all_wyck
+
+
 class CrystalFeat(Dataset):
     def __init__(
-        self, root, target, write=False, subset="train", scalex=False, scaley=False
+        self, root, target, write=False, subset="train", scalex=False, scaley=False, **kwargs
     ):
         csv_path = root
         self.subsets = {}
@@ -129,6 +151,10 @@ class CrystalFeat(Dataset):
             data_df[["a", "b", "c", "alpha", "beta", "gamma"]].values,
             dtype=torch.float32,
         )
+        try:
+            self.wyckoff = torch.tensor(parse_wyckoff(data_df["Wyckoff"], kwargs["wyck_max"]))
+        except KeyError:
+            self.wyckoff = None
 
         # To directly handle missing atomic numbers
         # missing_atoms = torch.zeros(x.shape[0], 5)
@@ -144,6 +170,12 @@ class CrystalFeat(Dataset):
         lat = self.lattice[idx]
         comp = self.composition[idx]
         target = self.y[idx]
+
+        if self.wyckoff is not None:
+            wyck = self.wyckoff[idx]
+        else:
+            wyck = None
+
         if self.xtransform:
             lat = ((lat - self.xtransform["mean"]) / self.xtransform["std"]).to(
                 torch.float32
@@ -153,7 +185,7 @@ class CrystalFeat(Dataset):
                 torch.float32
             )
 
-        return (comp, sg, lat), target
+        return (comp, sg, lat, wyck), target
 
 
 class CrystalGraph(InMemoryDataset):

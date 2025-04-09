@@ -9,8 +9,6 @@ from torch.utils.data import DataLoader
 import argparse
 import torch
 
-from pymatgen.core.periodic_table import Element
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--name")
@@ -27,18 +25,20 @@ if __name__ == "__main__":
 
     csv = csv_path / args
 
-    data = CrystalFeat(csv, targets[args], subset="train")
+    data = CrystalFeat(csv, targets[args], subset="train", wyck_max=228)
     loader = DataLoader(data, batch_size=len(data))
     for x, y in loader:
-        m1 = x[-1].mean(dim=0)
-        s1 = x[-1].std(dim=0)
-        torch.save(m1, csv / "x.mean")
-        torch.save(s1, csv / "x.std")
+        # m1 = x[-1].mean(dim=0)
+        # s1 = x[-1].std(dim=0)
+        # torch.save(m1, csv / "x.mean")
+        # torch.save(s1, csv / "x.std")
 
-        m2 = y.mean(dim=0)
-        s2 = y.std(dim=0)
-        torch.save(m2, csv / "y.mean")
-        torch.save(s2, csv / "y.std")
-        print(x[0].shape)
-        print(x[1].shape)
-        print(x[2].shape)
+        # m2 = y.mean(dim=0)
+        # s2 = y.std(dim=0)
+        # torch.save(m2, csv / "y.mean")
+        # torch.save(s2, csv / "y.std")
+        print(x[0])
+        print(x[1])
+        print(x[2])
+        print(x[3])
+        raise Exception
