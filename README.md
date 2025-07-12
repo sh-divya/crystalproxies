@@ -15,7 +15,11 @@ pip install -e .
 The code runs on python>=3.9,<3.12, and the required packages can be installed using
 
 ```bash
-pip install -r requirements_materials.txt
+pip install -r requirements_base.txt
+```
+Followed by installing Phast and torch-geomtric dependencies using
+```bash
+pip install -r requirements_extra.txt
 ```
 
 If you are experiencing dependencies issues, here is a working configuration:

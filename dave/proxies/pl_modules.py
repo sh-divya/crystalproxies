@@ -10,21 +10,21 @@ from dave.utils.gnn import preprocess_data
 class ProxyModule(pl.LightningModule):
     def __init__(self, proxy, loss, config):
         super().__init__()
+        self.model_name = config["config"].split("-")[0]
+        if self.model_name in ["fae", "faecry", "sch", "pyxtal_faenet"]:
+            self.preproc_method = "graph"
         self.model = proxy
         self.criterion = loss
         self.lr = config["optim"]["lr"]
         self.loss = 0
-        self.config = config
+        self.config = {k: v for k, v in config.items() if k not in ["root", "src"]}
         self.mae = MeanAbsoluteError()
         self.mse = MeanSquaredError()
         self.best_mae = 10e6
         self.best_mse = 10e6
-        self.save_hyperparameters(config)
+        self.save_hyperparameters(self.config)
         self.active_logger = config.get("debug") is None
         self.preproc_method = False
-        self.model_name = self.config["config"].split("-")[0]
-        if self.model_name in ["fae", "faecry", "sch", "pyxtal_faenet"]:
-            self.preproc_method = "graph"
 
     def training_step(self, batch, batch_idx):
         x, y = preprocess_data(batch, self.preproc_method)
