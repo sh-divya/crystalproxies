@@ -32,7 +32,7 @@ PyYAML = ">=6.0.1"
 minydra = ">=0.1.6"
 rich = ">=13.5.2"
 lmdb = ">=1.4.1"
-sqlalechmy = ">=2.0.0"
+sqlalchemy = ">=2.0.0"
 
 
 [build-system]
