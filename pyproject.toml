@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "dave"
-version = "2.0.6"
+version = "2.0.7"
 description = "DAVE proxy for the Crystals GFlowNet - Conventional cell @ MatBench Eform"
 authors = [
     "vict0rsch <vsch@pm.me>",
@@ -11,7 +11,7 @@ license = "MIT"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.14"
+python = ">=3.9,<3.15"
 torch = ">=2.0.1"
 torch-geometric = ">=2.3.1"
 faenet = ">=0.1.3"
